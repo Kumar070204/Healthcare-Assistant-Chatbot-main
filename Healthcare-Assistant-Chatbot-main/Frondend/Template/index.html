@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/Shuffle.css">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/SplitText.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.36.0/build/postprocessing.min.js"></script>
+  <script src="/static/Shuffle.js"></script>
+  <style>
+    body {
+      /* normal blue background for the whole website */
+      background-color: #1e3a8a; /* normal navy-blue */
+      color: #0f172a;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .container {
+      max-width: 1200px;
+      width: calc(100% - 300px);
+      margin: 28px 28px 48px 268px; /* leave space for the left sidebar */
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      z-index: 2;
+      transition: all 0.25s ease;
+    }
+
+    /* Header area (DR.CHAT only) */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .site-header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 28px; /* increased font size */
+      letter-spacing: 1px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+    .site-header img.logo {
+      width: 72px;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.28);
+    }
+    /* collapsed menu overlays instead of pushing content */
+    /* Left vertical sidebar menu */
+    .tabs {
+      position: fixed;
+      left: 18px;
+      top: 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 220px;
+      padding: 12px;
+      background: linear-gradient(180deg,#1b2633,#253341);
+      border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+      z-index: 1400;
+      align-items: stretch;
+      font-family: 'Press Start 2P', monospace; /* pixel font for the menu */
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+    }
+    .tab-button {
+      background-color: rgba(255,255,255,0.06);
+      border: none;
+      padding: 12px 14px;
+      color: #e6eef8;
+      cursor: pointer;
+      font-family: 'Press Start 2P', monospace;
+      width: 100%;
+      height: 56px;
+      text-align: left;
+      padding-left: 18px;
+      border-radius: 8px;
+      transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+      display: flex;
+      align-items: center;
+    }
+    .tab-button:hover {
+      transform: translateX(6px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.28);
+      background-color: rgba(255,255,255,0.10);
+    }
+    .tab-button:active {
+      transform: translateY(-2px) scale(0.995);
+    }
+    .tab-button.active {
+      background-color: #2b3946;
+      transform: translateY(-4px);
+    }
+
+    /* Make Predict buttons in eligibility and eye prediction smaller */
+    #eligibility button, #eye-prediction button {
+      padding: 8px 12px;
+      font-size: 13px;
+      height: 36px;
+      border-radius: 6px;
+    }
+
+    /* Collapsed sidebar styles */
+    .tabs.collapsed {
+      position: fixed;
+      left: 12px;
+      top: 80px;
+      display: flex;
+      flex-direction: column;
+      width: 220px;
+      gap: 10px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(50,60,70,0.98), rgba(46,56,66,0.94));
+      border-radius: 10px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+      max-width: none;
+      z-index: 1400;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+    .tabs.collapsed .tab-button {
+      max-width: none;
+      flex: none;
+      width: 100%;
+      text-align: left;
+      padding-left: 14px;
+    }
+
+    /* Toggle button to reopen sidebar */
+    #menu-toggle {
+      position: fixed;
+      left: 12px;
+      top: 20px;
+      background: #00c08b;
+      color: #00221b;
+      border: none;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-family: 'Press Start 2P', sans-serif;
+      cursor: pointer;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+      display: none;
+      z-index: 1500;
+      width: 36px;
+      height: 36px;
+    }
+    /* main screens pop with dark navy/black background */
+    .chatbot, .stroke-prediction, .appointment, .eligibility, .disease-prediction, .eye-prediction, .food-recommendation {
+      background-color: #071025; /* very dark navy */
+      color: #e6eef8;
+      padding: 18px;
+      border-radius: 12px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 12px 40px rgba(2,6,12,0.45);
+      border: 1px solid rgba(255,255,255,0.02);
+    }
+    .chat-window, .disease-window, .food-window {
+      height: 100%;
+      width: 100%;
+      overflow-y: auto;
+      background-color: #4a5568;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      flex-grow: 1;
+    }
+    .chat-window .inner, .disease-window .inner, .food-window .inner {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 6px;
+    }
+    /* Constrain large preview boxes (image/model outputs) */
+    #preview, #eyePreview, .large-preview {
+      max-height: 420px;
+      width: 100%;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+    .prediction-canvas, .model-output {
+      max-height: 420px;
+      overflow: hidden;
+      border-radius: 6px;
+    }
+    /* Chat message styling */
+    .messages { display:flex; flex-direction:column; gap:12px; }
+    .message { max-width: 100%; display:inline-block; padding:12px; border-radius:10px; line-height:1.45; }
+    .message.user { align-self:flex-end; background: linear-gradient(180deg,#2f855a,#48bb78); color: #071112; border-bottom-right-radius:4px; }
+    .message.bot { align-self:flex-start; background: #2a3140; color: #e6eef8; border-bottom-left-radius:4px; }
+    .message .meta { font-size:12px; opacity:0.75; margin-bottom:6px; }
+    .message p { margin:0 0 8px 0; }
+    .message a { color: #7ee3b6; text-decoration:underline; }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+    }
+    input, button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-family: inherit;
+      flex-grow: 1;
+    }
+    /* keep select compact and not stretching */
+    .input-group select, select {
+      flex: 0 0 auto;
+      width: 160px;
+      max-width: 40%;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    input, select {
+      background-color: #4a5568;
+      color: #e2e8f0;
+    }
+    button {
+      background-color: #48bb78;
+      cursor: pointer;
+      flex-shrink: 0;
+      width: auto;
+    }
+    button:hover {
+      background-color: #38a169;
+    }
+    .hidden {
+      display: none;
+    }
+    img {
+      max-width: 100%;
+      border-radius: 5px;
+    }
+    #stroke .input-group, #eligibility .input-group, #disease-prediction .input-group, #eye-prediction .input-group, #food-recommendation .input-group {
+      flex-direction: column;
+      gap: 10px;
+    }
+    #prediction, #eligibility-result, #disease-result, #eye-result, #food-result {
+      margin-top: 10px;
+    }
+    #appointment-result, #eligibility-result, #disease-result, #eye-result, #food-result {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #4a5568;
+      border-radius: 5px;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+    #disease-questions, #food-questions {
+      margin-top: 10px;
+    }
+    .loading {
+      color: #48bb78;
+      font-style: italic;
+    }
+    /* responsive tweaks */
+    @media (max-width: 900px) {
+      .tab-button { flex: 1 1 140px; max-width: 220px; }
+      #top-header h1 { font-size: 16px; }
+      .container { width: 82%; margin-left: 18%; }
+    }
+    @media (max-width: 600px) {
+      .tabs { gap: 8px; margin-bottom: 12px; }
+      .tab-button { padding: 10px; font-size: 11px; }
+      #menu-toggle { left: 8px; top: 8px; }
+      /* on small screens use full width so UI is usable */
+      .container { width: 100%; margin-left: 0; padding: 12px; }
+      .tabs.collapsed ~ .chatbot,
+      .tabs.collapsed ~ .stroke-prediction,
+      .tabs.collapsed ~ .appointment,
+      .tabs.collapsed ~ .eligibility,
+      .tabs.collapsed ~ .disease-prediction,
+      .tabs.collapsed ~ .eye-prediction,
+      .tabs.collapsed ~ .food-recommendation { margin-left: 0; }
+    }
+
+    /* don't use the pixel font everywhere - keep header in Press Start */
+    #top-header h1 { font-family: 'Press Start 2P', sans-serif; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top centered header with logo -->
+    <div class="site-header" id="top-header">
+      <img class="logo" src="/static/drchat-logo.jpeg" alt="DR.CHAT logo">
+      <h1>DR.CHAT</h1>
+    </div>
+  <button id="menu-toggle" aria-label="Open menu">☰</button>
+    <div class="tabs" id="tabs">
+      <button class="tab-button active" onclick="showTab('chatbot')">Chatbot</button>
+      <button class="tab-button" onclick="showTab('stroke')">Stroke Prediction</button>
+      <button class="tab-button" onclick="showTab('appointment')">Patient Appointment</button>
+      <button class="tab-button" onclick="showTab('eligibility')">Insurance Guidance</button>
+      <button class="tab-button" onclick="showTab('disease-prediction')">Disease Prediction</button>
+      <button class="tab-button" onclick="showTab('eye-prediction')">Ophthalmology Disease Prediction</button>
+      <button class="tab-button" onclick="showTab('food-recommendation')">Food Recommendation</button>
+    </div>
+    <div id="chatbot" class="chatbot">
+      <div id="chat-window" class="chat-window"></div>
+      <div class="input-group">
+        <select id="mode" onchange="updateMode()">
+          <option value="qa">QA</option>
+          <option value="fact_check">Fact Check</option>
+          <option value="myth">Myth Busting</option>
+        </select>
+        <input type="text" id="query" placeholder="e.g., Does fenugreek reduce body heat?">
+        <button onclick="sendChat()">Send</button>
+        <button onclick="clearChat()">Clear</button>
+      </div>
+    </div>
+    <div id="stroke" class="stroke-prediction hidden">
+      <p>Upload a brain scan image to predict if it shows a stroke or normal condition.</p>
+      <div class="input-group">
+        <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload(event)">
+        <img id="preview" style="display: none;">
+      </div>
+      <button onclick="predictStroke()">Predict</button>
+      <p id="prediction"></p>
+    </div>
+    <div id="appointment" class="appointment hidden">
+      <p>Enter disease or specialization to find the nearest hospital.</p>
+      <div class="input-group">
+        <input type="text" id="specialization" placeholder="e.g., Pediatrics">
+        <button onclick="findNearestHospital()">Find Nearest</button>
+      </div>
+      <div id="appointment-result" class="chat-window"></div>
+    </div>
+    <div id="eligibility" class="eligibility hidden">
+      <p>Upload your insurance plan and situation as PDF to predict eligibility.</p>
+      <div class="input-group">
+        <input type="file" id="pdfUpload" accept=".pdf" onchange="handlePdfUpload(event)">
+      </div>
+      <button onclick="predictEligibility()">Predict</button>
+      <div id="eligibility-result" class="chat-window"></div>
+    </div>
+    <div id="disease-prediction" class="disease-prediction hidden">
+      <p>Describe your main problem to start the disease prediction process.</p>
+      <div class="input-group">
+        <input type="text" id="mainProblem" placeholder="e.g., Fever, Cough">
+        <button onclick="startDiseasePrediction()">Start</button>
+      </div>
+      <div id="disease-questions" class="disease-window"></div>
+      <div id="disease-result" class="chat-window"></div>
+    </div>
+    <div id="eye-prediction" class="eye-prediction hidden">
+      <p>Upload an eye scan image to predict eye diseases (e.g., cataract, diabetic retinopathy, glaucoma).</p>
+      <div class="input-group">
+        <input type="file" id="eyeImageUpload" accept="image/*" onchange="handleEyeImageUpload(event)">
+        <img id="eyePreview" style="display: none;">
+      </div>
+      <button onclick="predictEyeDisease()">Predict</button>
+      <p id="eye-result"></p>
+    </div>
+    <div id="food-recommendation" class="food-recommendation hidden">
+      <p>Describe what you feel like eating (e.g., low calorie, diabetic-friendly).</p>
+      <div class="input-group">
+        <input type="text" id="foodQuery" placeholder="e.g., I want low calorie food">
+        <button onclick="startFoodRecommendation()">Get Recommendations</button>
+      </div>
+      <div id="food-questions" class="food-window"></div>
+      <div id="food-result" class="chat-window"></div>
+    </div>
+  </div>
+  <script>
+    let currentTab = 'chatbot';
+    let sessionId = 'default';
+    const tabsEl = document.getElementById('tabs');
+    const menuToggle = document.getElementById('menu-toggle');
+    let collapsed = false;
+
+    // Collapse tabs into a left-side menu
+    function collapseTabs() {
+      tabsEl.classList.add('collapsed');
+      menuToggle.style.display = 'inline-block';
+      collapsed = true;
+    }
+
+    // Expand tabs back to top bar
+    function expandTabs() {
+      tabsEl.classList.remove('collapsed');
+      menuToggle.style.display = 'none';
+      collapsed = false;
+    }
+
+    // Toggle when the floating menu button clicked
+    menuToggle.addEventListener('click', function() {
+      if (collapsed) expandTabs();
+    });
+
+    function showTab(tab) {
+      document.getElementById(currentTab).classList.add('hidden');
+      document.getElementById(tab).classList.remove('hidden');
+      const prevBtn = document.querySelector(`.tab-button[onclick="showTab('${currentTab}')"]`);
+      const newBtn = document.querySelector(`.tab-button[onclick="showTab('${tab}')"]`);
+      if (prevBtn) prevBtn.classList.remove('active');
+      if (newBtn) newBtn.classList.add('active');
+      currentTab = tab;
+      if (tab === 'disease-prediction') {
+        document.getElementById('disease-questions').innerHTML = '';
+        document.getElementById('disease-result').innerHTML = '';
+      }
+      if (tab === 'food-recommendation') {
+        document.getElementById('food-questions').innerHTML = '';
+        document.getElementById('food-result').innerHTML = '';
+      }
+  // After selecting a tab, previously the tab bar auto-collapsed to a left-side menu.
+  // We removed the automatic collapse to keep the sidebar visible on desktop.
+    }
+
+    function updateMode() {
+      // Mode is sent with the query, no need to store it separately
+    }
+
+    function addMessage(windowId, query, response) {
+      const chatWindow = document.getElementById(windowId);
+      // ensure messages wrapper exists
+      let wrapper = chatWindow.querySelector('.messages');
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'messages';
+        chatWindow.appendChild(wrapper);
+      }
+
+      // create user bubble
+      if (query) {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user';
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = 'You';
+        userDiv.appendChild(meta);
+        const txt = document.createElement('div');
+        txt.innerText = query;
+        userDiv.appendChild(txt);
+        wrapper.appendChild(userDiv);
+      }
+
+      // create bot bubble
+      const botDiv = document.createElement('div');
+      botDiv.className = 'message bot';
+      const botMeta = document.createElement('div');
+      botMeta.className = 'meta';
+      botMeta.textContent = 'Dr.Chat';
+      botDiv.appendChild(botMeta);
+      // render response (supports basic markdown)
+      const respHtml = renderBotResponse(response || '');
+      const respContainer = document.createElement('div');
+      respContainer.innerHTML = respHtml;
+      botDiv.appendChild(respContainer);
+      wrapper.appendChild(botDiv);
+
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Basic helpers: escape HTML and convert simple markdown to HTML
+    function escapeHtml(unsafe) {
+      return String(unsafe)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function markdownToHtml(md) {
+      if (!md) return '';
+      // Normalize line endings
+      md = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+      // Convert links [text](url)
+      md = md.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+      // Bold **text**
+      md = md.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+      // Italic *text*
+      md = md.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+      // Lists: convert lines starting with - or * or numbered to <li>
+      const lines = md.split('\n');
+      const out = [];
+      let inUL = false, inOL = false;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) {
+          if (inUL) { out.push('</ul>'); inUL = false; }
+          if (inOL) { out.push('</ol>'); inOL = false; }
+          out.push('');
+          continue;
+        }
+        const ulMatch = line.match(/^[-*]\s+(.*)/);
+        const olMatch = line.match(/^\d+[.)]\s+(.*)/);
+        if (ulMatch) {
+          if (!inUL) { out.push('<ul>'); inUL = true; }
+          out.push('<li>' + ulMatch[1] + '</li>');
+          continue;
+        }
+        if (olMatch) {
+          if (!inOL) { out.push('<ol>'); inOL = true; }
+          out.push('<li>' + olMatch[1] + '</li>');
+          continue;
+        }
+        out.push('<p>' + line + '</p>');
+      }
+      if (inUL) out.push('</ul>');
+      if (inOL) out.push('</ol>');
+      return out.join('\n');
+    }
+
+    function renderBotResponse(text) {
+      // If it's already an object (e.g., an array), stringify sensibly
+      if (typeof text === 'object') {
+        try { text = JSON.stringify(text, null, 2); } catch (e) { text = String(text); }
+      }
+      // escape first, then convert markdown patterns to HTML
+      const escaped = escapeHtml(text);
+      const html = markdownToHtml(escaped);
+      return html;
+    }
+
+    function sendChat() {
+      const query = document.getElementById('query').value;
+      const mode = document.getElementById('mode').value;
+      if (!query) {
+        addMessage('chat-window', '', 'Oops, please type a question!');
+        return;
+      }
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, mode })
+      })
+      .then(response => response.json())
+      .then(data => addMessage('chat-window', query, data.response))
+      .catch(error => addMessage('chat-window', query, `Error: ${error.message}`));
+      document.getElementById('query').value = '';
+    }
+
+    function clearChat() {
+      document.getElementById('chat-window').innerHTML = '';
+      document.getElementById('query').value = '';
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('preview').src = e.target.result;
+          document.getElementById('preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function predictStroke() {
+      const fileInput = document.getElementById('imageUpload');
+      if (!fileInput.files.length) {
+        document.getElementById('prediction').textContent = 'Please upload an image.';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: e.target.result })
+        })
+        .then(response => response.json())
+        .then(data => document.getElementById('prediction').textContent = data.prediction || data.error)
+        .catch(error => document.getElementById('prediction').textContent = `Error: ${error.message}`);
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    function findNearestHospital() {
+      const specialization = document.getElementById('specialization').value || 'Pediatrics';
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        fetch('/api/appointment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ specialization, lat, lng })
+        })
+        .then(response => response.json())
+        .then(data => {
+          const result = document.getElementById('appointment-result');
+          if (data.error) {
+            result.innerHTML = `<p>${data.error}</p>`;
+          } else {
+            result.innerHTML = `
+              <p><strong>Hospital:</strong> ${data.hospital_name} (${data.area}, ${data.city})</p>
+              <p><strong>Doctor:</strong> ${data.doctor_name} (ID: ${data.doctor_id})</p>
+              <p><strong>Specialization:</strong> ${data.specialization}, Experience: ${data.experience} years</p>
+              <p><strong>Rating:</strong> ${data.rating}</p>
+              <p><strong>Contact:</strong> ${data.contact}</p>
+              <p><strong>Distance:</strong> ${data.distance}</p>
+            `;
+          }
+        })
+        .catch(error => {
+          result.innerHTML = `<p>Error: ${error.message}</p>`;
+        });
+      }, function(error) {
+        const result = document.getElementById('appointment-result');
+        result.innerHTML = `<p>Error getting location: ${error.message}. Please enable location access.</p>`;
+      });
+    }
+
+    function handlePdfUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          // Ready to send, but no preview for PDF
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function predictEligibility() {
+      const fileInput = document.getElementById('pdfUpload');
+      if (!fileInput.files.length) {
+        document.getElementById('eligibility-result').innerHTML = '<p>Please upload a PDF.</p>';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        fetch('/api/eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdf: e.target.result })
+        })
+        .then(response => response.json())
+        .then(data => {
+          const result = document.getElementById('eligibility-result');
+          if (data.error) {
+            result.innerHTML = `<p>${data.error}</p>`;
+          } else {
+            result.innerHTML = `
+              <p><strong>Extracted Condition:</strong> ${data.extracted_condition}</p>
+              <p><strong>Predicted Eligibility:</strong> ${data.predicted_eligibility}</p>
+            `;
+          }
+        })
+        .catch(error => {
+          result.innerHTML = `<p>Error: ${error.message}</p>`;
+        });
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    function startDiseasePrediction() {
+      const mainProblem = document.getElementById('mainProblem').value;
+      if (!mainProblem) {
+        document.getElementById('disease-questions').innerHTML = '<p>Please enter your main problem.</p>';
+        return;
+      }
+      addMessage('disease-questions', mainProblem, '');
+      fetch('/api/disease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, main_problem: mainProblem })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('disease-questions').innerHTML = `<p>${data.error}</p>`;
+        } else {
+          addMessage('disease-questions', '', data.message.split('\n').join('<br>'));
+          setupDiseaseInteraction(sessionId);
+        }
+      })
+      .catch(error => {
+        document.getElementById('disease-questions').innerHTML = `<p>Error: ${error.message}</p>`;
+      });
+    }
+
+    function setupDiseaseInteraction(sessionId) {
+      const questionsDiv = document.getElementById('disease-questions');
+      // Create a single interaction container
+      questionsDiv.innerHTML = `
+        <div id="disease-interaction" style="padding:12px 0"></div>
+        <div id="disease-result"></div>`;
+      const interact = document.getElementById('disease-interaction');
+
+      function sanitize(q) {
+        return (q || '').toString().replace(/<br\s*\/?>(\s*)/gi, ' ').replace(/\s+/g, ' ').trim();
+      }
+
+      function renderQuestion(qText) {
+        const q = sanitize(qText);
+        interact.innerHTML = '';
+        if (!q) return;
+        interact.innerHTML = `
+          <div class="disease-question">${q}</div>
+          <div class="disease-reply" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+            <input type="text" id="diseaseAnswer" placeholder="yes/no/exit" style="flex:0 0 220px; padding:8px;" aria-label="Answer">
+            <button id="diseaseSubmit">Submit</button>
+          </div>`;
+        const inp = document.getElementById('diseaseAnswer');
+        const btn = document.getElementById('diseaseSubmit');
+        if (inp) { inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        if (btn) btn.onclick = submitDiseaseAnswer;
+      }
+
+      function fetchNextQuestion() {
+        fetch('/api/disease', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            interact.innerHTML = `<p>${data.error}</p>`;
+            return;
+          }
+          if (data.done) {
+            const resultDiv = document.getElementById('disease-result');
+            resultDiv.innerHTML = data.prediction ? `<p>🔮 Likely condition: ${data.prediction}</p><p>🩺 Suggested precautions:</p><ul>${data.precautions.map(p => `<li>${p}</li>`).join('')}</ul>` : '<p>Could not confidently identify your condition. Please consult a doctor.</p>';
+            interact.innerHTML = '';
+            sessionId = 'default';
+            return;
+          }
+          // show next question
+          renderQuestion(data.question);
+        })
+        .catch(err => { interact.innerHTML = `<p>Error: ${err.message}</p>`; });
+      }
+
+      // initial fetch
+      fetchNextQuestion();
+
+      // submit handler
+      window.submitDiseaseAnswer = function() {
+        const inputEl = document.getElementById('diseaseAnswer');
+        if (!inputEl) return;
+        const answer = inputEl.value.toLowerCase().trim();
+        if (!answer) return;
+        addMessage('disease-questions', answer, '');
+        // disable while processing
+        inputEl.disabled = true;
+        const btn = document.getElementById('diseaseSubmit');
+        if (btn) btn.disabled = true;
+        const loading = document.createElement('p');
+        loading.className = 'loading';
+        loading.textContent = 'Processing your answer, please wait...';
+        interact.appendChild(loading);
+
+        fetch('/api/disease', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, answer: answer })
+        })
+        .then(r => r.json())
+        .then(data => {
+          loading.remove();
+          if (data.error) { interact.innerHTML = `<p>${data.error}</p>`; return; }
+          if (data.done) {
+            const resultDiv = document.getElementById('disease-result');
+            resultDiv.innerHTML = data.prediction ? `<p>🔮 Likely condition: ${data.prediction}</p><p>🩺 Suggested precautions:</p><ul>${data.precautions.map(p => `<li>${p}</li>`).join('')}</ul>` : '<p>Could not confidently identify your condition. Please consult a doctor.</p>';
+            interact.innerHTML = '';
+            sessionId = 'default';
+            return;
+          }
+          // render the next question
+          renderQuestion(data.question);
+        })
+        .catch(err => { loading.remove(); interact.innerHTML = `<p>Error: ${err.message}</p>`; })
+        .finally(() => { if (inputEl) { inputEl.disabled = false; inputEl.value = ''; } if (btn) btn.disabled = false; });
+      };
+    }
+
+    function handleEyeImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('eyePreview').src = e.target.result;
+          document.getElementById('eyePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function predictEyeDisease() {
+      const fileInput = document.getElementById('eyeImageUpload');
+      if (!fileInput.files.length) {
+        document.getElementById('eye-result').textContent = 'Please upload an image.';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        fetch('/api/eye_predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: e.target.result })
+        })
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          if (data.error) {
+            document.getElementById('eye-result').textContent = data.error;
+          } else {
+            let resultText = `Predicted: ${data.prediction}\nProbabilities:\n`;
+            for (let cls in data.probabilities) {
+              resultText += `${cls}: ${data.probabilities[cls].toFixed(2)}%\n`;
+            }
+            document.getElementById('eye-result').textContent = resultText;
+          }
+        })
+        .catch(error => document.getElementById('eye-result').textContent = `Error: ${error.message}`);
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    function startFoodRecommendation() {
+      const foodQuery = document.getElementById('foodQuery').value;
+      if (!foodQuery) {
+        document.getElementById('food-questions').innerHTML = '<p>Please enter what you feel like eating.</p>';
+        return;
+      }
+      addMessage('food-questions', foodQuery, '');
+      fetch('/api/food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, user_input: foodQuery })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('food-questions').innerHTML = `<p>${data.error}</p>`;
+        } else {
+          addMessage('food-questions', '', data.message.split('\n').join('<br>'));
+          if (!data.done) {
+            document.getElementById('food-questions').innerHTML += `
+              <br><input type="text" id="foodAction" placeholder="Type 'more', 'query', or 'exit'">
+              <button onclick="submitFoodAction()">Submit</button>`;
+          }
+        }
+      })
+      .catch(error => {
+        document.getElementById('food-questions').innerHTML = `<p>Error: ${error.message}</p>`;
+      });
+    }
+
+    window.submitFoodAction = function() {
+      const action = document.getElementById('foodAction').value.toLowerCase();
+      if (!['more', 'query', 'exit'].includes(action)) {
+        document.getElementById('food-questions').innerHTML += '<br><p>Invalid input. Please type "more", "query", or "exit".</p>';
+        return;
+      }
+      addMessage('food-questions', action, '');
+      document.getElementById('food-questions').innerHTML += `<br><p class="loading">Processing your request, please wait...</p>`;
+      fetch('/api/food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, action: action })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('food-questions').innerHTML = document.getElementById('food-questions').innerHTML.replace('<br><p class="loading">Processing your request, please wait...</p>', '');
+        if (data.error) {
+          document.getElementById('food-questions').innerHTML = `<p>${data.error}</p>`;
+        } else if (data.done) {
+          document.getElementById('food-result').innerHTML = data.message;
+          document.getElementById('food-questions').innerHTML = '';
+          sessionId = 'default';
+        } else if (action === 'query') {
+          document.getElementById('food-questions').innerHTML = '';
+          document.getElementById('food-result').innerHTML = '';
+          document.getElementById('foodQuery').value = '';
+        } else {
+          addMessage('food-questions', '', data.message.split('\n').join('<br>'));
+          document.getElementById('food-questions').innerHTML += `
+            <br><input type="text" id="foodAction" placeholder="Type 'more', 'query', or 'exit'">
+            <button onclick="submitFoodAction()">Submit</button>`;
+        }
+      })
+      .catch(error => {
+        document.getElementById('food-questions').innerHTML = document.getElementById('food-questions').innerHTML.replace('<br><p class="loading">Processing your request, please wait...</p>', '');
+        document.getElementById('food-questions').innerHTML = `<p>Error: ${error.message}</p>`;
+      });
+    };
+
+    /* GSAP-based entrance animation for most text (excluding tab buttons / menu) */
+    (function runTextAnimation() {
+      try {
+        // wait a tick so fonts load
+        setTimeout(() => {
+          const targets = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,p,button,input,select,label'))
+            .filter(el => !el.closest('.tabs') && el.id !== 'menu-toggle');
+
+          targets.forEach((el, i) => {
+            gsap.fromTo(el, { opacity: 0, y: 18 }, { opacity: 1, y: 0, delay: 0.04 * i, duration: 0.45, ease: 'power3.out' });
+          });
+        }, 120);
+      } catch (e) {
+        // ignore if gsap not available
+        console.warn('Text animation skipped', e);
+      }
+    })();
+  </script>
+</body>
+</html>
