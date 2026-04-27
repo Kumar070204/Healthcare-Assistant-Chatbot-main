@@ -138,3 +138,14 @@ Expand hospital & doctor DB with real data
 Build mobile app integration
 
 Enhance multilingual support
+
+---
+
+## Built by
+
+**Kumaraswamy G** 
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/kumaraswamy-g-872b81277/)
+[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:kumaraswamy2004@gmail.com)
+
+---
